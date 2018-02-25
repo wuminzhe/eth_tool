@@ -21,13 +21,12 @@ module EthTool
   end
 
   def self.generate_raw_transaction(private_key, value, data, gas_limit, gas_price = nil, to = nil, nonce = nil)
-
     key = ::Eth::Key.new priv: private_key
     address = key.address
   
     gas_price_in_dec = gas_price.nil? ? @@rpc.eth_gas_price["result"].to_i(16) : gas_price
-  
     nonce = nonce.nil? ? @@rpc.eth_get_transaction_count(address, 'pending')["result"].to_i(16) : nonce
+
     args = {
       from: address,
       value: 0,
@@ -36,6 +35,7 @@ module EthTool
       gas_limit: gas_limit,
       gas_price: gas_price_in_dec
     }
+    
     args[:value] = (value * 10**18).to_i if value
     args[:data] = data if data
     args[:to] = to if to
@@ -58,11 +58,19 @@ module EthTool
     @@rpc.eth_send_raw_transaction(rawtx)
   end
 
+  def self.sweep_token(private_key, token_contract_address, token_decimals, to)
+    address = ::Eth::Key.new(priv: private_key).address
+    token_balance = get_token_balance(address, token_contract_address, token_decimals)
+    gas_limit = 60000
+    gas_price = 5_000_000_000
+    transfer_token(private_key, token_contract_address, token_decimals, token_balance, gas_limit, gas_price, to)
+  end
+
   def self.sweep_eth(private_key, to)
     address = ::Eth::Key.new(priv: private_key).address
     eth_balance = get_eth_balance(address)
     gas_limit = 60000
-    gas_price = 10_000_000_000
+    gas_price = 5_000_000_000
     amount = eth_balance - (gas_limit * gas_price / 10**18.to_f)
     transfer_eth(private_key, amount, gas_limit, gas_price, to)
   end
