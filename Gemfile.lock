@@ -1,0 +1,62 @@
+PATH
+  remote: .
+  specs:
+    eth_tool (0.1.0)
+      bip44 (~> 0.2.14)
+      ethereum.rb (~> 2.1.8)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activesupport (5.1.5)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      tzinfo (~> 1.1)
+    bip44 (0.2.14)
+      bip_mnemonic
+      digest-sha3 (~> 1.1.0)
+      ecdsa (~> 1.2.0)
+      eth
+      money-tree
+      rlp (~> 0.7.3)
+    bip_mnemonic (0.0.2)
+    concurrent-ruby (1.0.5)
+    digest-sha3 (1.1.0)
+    ecdsa (1.2.0)
+    eth (0.4.6)
+      digest-sha3 (~> 1.1)
+      ffi (~> 1.0)
+      money-tree (~> 0.9)
+      rlp (~> 0.7.3)
+      scrypt (~> 3.0.5)
+    ethereum.rb (2.1.8)
+      activesupport (~> 5.0)
+      digest-sha3 (~> 1.1)
+    ffi (1.9.22)
+    ffi-compiler (1.0.1)
+      ffi (>= 1.0.0)
+      rake
+    i18n (0.9.5)
+      concurrent-ruby (~> 1.0)
+    minitest (5.11.3)
+    money-tree (0.9.0)
+      ffi
+    rake (10.5.0)
+    rlp (0.7.3)
+    scrypt (3.0.5)
+      ffi-compiler (>= 1.0, < 2.0)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (~> 1.16)
+  eth_tool!
+  rake (~> 10.0)
+
+BUNDLED WITH
+   1.16.1
