@@ -117,9 +117,34 @@ module EthTool
     # 目标地址上需要填充满这么多eth
     amount = BigDecimal(@@gas_limit) * BigDecimal(@@gas_price) / 10**18
 
-    return unless eth_balance < amount
+    return unless eth_balance < amount # 如果有足够多的eth，就直接返回
     
     transfer_eth(private_key, (amount-eth_balance), @@gas_limit, @@gas_price, to)
+  end
+
+  def self.tx_replace(private_key, txhash, gas_price)
+    tx = @@rpc.eth_get_transaction_by_hash(txhash)["result"]
+    return if tx.nil?
+  
+    value = tx["value"].to_i(16)
+    data = tx["input"]
+    gas_limit = tx["gas"].to_i(16)
+    gas_price = gas_price
+    to = tx["to"]
+    nonce = tx["nonce"].to_i(16)
+  
+    rawtx = generate_raw_transaction(private_key, value, data, gas_limit, gas_price, to, nonce)
+    @@rpc.eth_send_raw_transaction(rawtx)
+  end
+
+  def self.get_private_key_from_keystore(dir, address, passphrase)
+    path = File.join(dir, '*')
+    Dir[path].each do |file|
+      if file.end_with?(address[2..-1])
+        key = ::Eth::Key.decrypt(File.read(file), passphrase)
+        return key.private_key.to_hex
+      end
+    end
   end
 
   def self.generate_addresses_from_xprv(xprv, amount)

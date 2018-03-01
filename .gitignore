@@ -7,3 +7,6 @@
 /spec/reports/
 /tmp/
 /use.rb
+/scripts
+/.ruby-gemset
+/.ruby-version
