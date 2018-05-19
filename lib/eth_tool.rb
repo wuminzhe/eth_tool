@@ -5,8 +5,6 @@ require 'eth'
 require 'bigdecimal'
 
 module EthTool
-  @@gas_limit = 60000
-  @@gas_price = 5_000_000_000
 
   def self.rpc=(url)
     @@rpc = Ethereum::HttpClient.new(url)
@@ -16,16 +14,8 @@ module EthTool
     @@rpc
   end
 
-  def self.gas_limit=(gas_limit)
-    @@gas_limit = gas_limit
-  end
-
-  def self.gas_price=(gas_price)
-    @@gas_price = gas_price
-  end
-
-  def self.fee
-    BigDecimal(@@gas_limit) * BigDecimal(@@gas_price) / 10**18.to_f
+  def self.fee(gas_limit, gas_price)
+    BigDecimal(gas_limit) * BigDecimal(gas_price) / 10**18.to_f
   end
 
   class << self
@@ -70,7 +60,23 @@ module EthTool
     tx.hex
   end
 
-  def self.transfer_token(private_key, token_contract_address, token_decimals, amount, gas_limit, gas_price, to)
+  def self.airdrop(private_key, airdrop_contract_address, token_contract_address, addresses, values)
+    data = "0xad8733ca"
+    data = data + padding(token_contract_address)
+    data = data + "0000000000000000000000000000000000000000000000000000000000000060"
+    data = data + "0000000000000000000000000000000000000000000000000000000000001840"
+    data = data + "00000000000000000000000000000000000000000000000000000000000000be"
+    addresses.each do |address|
+      data = data + padding(address)
+    end
+    values.each do |value|
+      data = data + padding(value.to_i.to_s(16))
+    end
+
+    puts data
+  end
+
+  def self.transfer_token(private_key, token_contract_address, token_decimals, amount, gas_limit, gas_price, to, nonce=nil)
     if amount < (1.0/10**token_decimals)
       logger.info "转账金额不能小于精度最小单位(#{token_contract_address}, #{token_decimals})"
       return
@@ -79,7 +85,7 @@ module EthTool
     # 生成raw transaction
     amount_in_wei = (amount * (10**token_decimals)).to_i
     data = '0xa9059cbb' + padding(to) + padding(dec_to_hex(amount_in_wei)) # Ethereum::Function.calc_id('transfer(address,uint256)') # a9059cbb
-    rawtx = generate_raw_transaction(private_key, 0, data, gas_limit, gas_price, token_contract_address)
+    rawtx = generate_raw_transaction(private_key, 0, data, gas_limit, gas_price, token_contract_address, nonce)
     
     @@rpc.eth_send_raw_transaction(rawtx)
   end
@@ -93,33 +99,33 @@ module EthTool
     @@rpc.eth_send_raw_transaction(rawtx)
   end
 
-  # 
-  def self.sweep_token(private_key, token_contract_address, token_decimals, to)
+  # sweep
+  def self.sweep_token(private_key, token_contract_address, token_decimals, to, gas_limit=60000, gas_price=5_000_000_000)
     address = ::Eth::Key.new(priv: private_key).address
     token_balance = get_token_balance(address, token_contract_address, token_decimals)
     return if token_balance == 0
-    transfer_token(private_key, token_contract_address, token_decimals, token_balance, @@gas_limit, @@gas_price, to)
+    transfer_token(private_key, token_contract_address, token_decimals, token_balance, gas_limit, gas_price, to)
   end
 
-  def self.sweep_eth(private_key, to)
+  def self.sweep_eth(private_key, to, gas_limit=60000, gas_price=5_000_000_000)
     address = ::Eth::Key.new(priv: private_key).address
     eth_balance = get_eth_balance(address)
-    keep = BigDecimal(@@gas_limit) * BigDecimal(@@gas_price) / 10**18
+    # 转eth不能都转，要留一点作为gas费用
+    keep = BigDecimal(gas_limit) * BigDecimal(gas_price) / 10**18
     amount = eth_balance - keep
     return if amount <= 0
-    transfer_eth(private_key, amount, @@gas_limit, @@gas_price, to)
+    transfer_eth(private_key, amount, gas_limit, gas_price, to)
   end
 
-  def self.fill_eth(private_key, to)
+  # 目标地址上需要填充满这么多eth
+  # amount = BigDecimal(gas_limit) * BigDecimal(gas_price) / 10**18
+  def self.fill_eth(private_key, to, amount, gas_limit=60000, gas_price=5_000_000_000)
     # 目标地址上现有eth
     eth_balance = get_eth_balance(to)
 
-    # 目标地址上需要填充满这么多eth
-    amount = BigDecimal(@@gas_limit) * BigDecimal(@@gas_price) / 10**18
-
     return unless eth_balance < amount # 如果有足够多的eth，就直接返回
     
-    transfer_eth(private_key, (amount-eth_balance), @@gas_limit, @@gas_price, to)
+    transfer_eth(private_key, (amount-eth_balance), gas_limit, gas_price, to)
   end
 
   def self.tx_replace(private_key, txhash, gas_price)
