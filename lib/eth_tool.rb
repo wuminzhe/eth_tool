@@ -37,6 +37,7 @@ module EthTool
     BigDecimal(result) / BigDecimal(10**18)
   end
 
+  # value: 实际的eth数量，gas_limit 和 gas_price都是十进制
   def self.generate_raw_transaction(private_key, value, data, gas_limit, gas_price = nil, to = nil, nonce = nil)
     key = ::Eth::Key.new priv: private_key
     address = key.address
@@ -60,10 +61,6 @@ module EthTool
     tx.sign key
     tx.hex
   end
-
-  # def self.wputs(text)
-  #   File.open('/Users/wuminzhe/Projects/eth_tool/scripts/fuck.txt', 'a') { |f| f.puts(text) }
-  # end
 
   def self.estimate_gas(to, data)
     @@rpc.eth_estimate_gas({to: to, data: data})["result"].to_i(16)
@@ -149,13 +146,13 @@ module EthTool
     tx = @@rpc.eth_get_transaction_by_hash(txhash)["result"]
     return if tx.nil?
   
-    value = tx["value"].to_i(16)
+    value = BigDecimal(tx["value"].to_i(16)) / 10**18
     data = tx["input"]
     gas_limit = tx["gas"].to_i(16)
     gas_price = gas_price
     to = tx["to"]
     nonce = tx["nonce"].to_i(16)
-  
+
     rawtx = generate_raw_transaction(private_key, value, data, gas_limit, gas_price, to, nonce)
     @@rpc.eth_send_raw_transaction(rawtx)
   end
