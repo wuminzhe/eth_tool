@@ -23,6 +23,7 @@ module EthTool
   end
 
   ############################################################################
+ 
 
   def self.get_token_balance(address, token_contract_address, token_decimals)
     data = '0x70a08231' + padding(address) # Ethereum::Function.calc_id('balanceOf(address)') # 70a08231
@@ -60,20 +61,36 @@ module EthTool
     tx.hex
   end
 
-  def self.airdrop(private_key, airdrop_contract_address, token_contract_address, addresses, values)
+  # def self.wputs(text)
+  #   File.open('/Users/wuminzhe/Projects/eth_tool/scripts/fuck.txt', 'a') { |f| f.puts(text) }
+  # end
+
+  def self.estimate_gas(to, data)
+    @@rpc.eth_estimate_gas({to: to, data: data})["result"].to_i(16)
+  end
+
+  def self.build_airdrop_data(token_contract_address, addresses, values)
     data = "0xad8733ca"
     data = data + padding(token_contract_address)
     data = data + "0000000000000000000000000000000000000000000000000000000000000060"
     data = data + "0000000000000000000000000000000000000000000000000000000000001840"
     data = data + "00000000000000000000000000000000000000000000000000000000000000be"
     addresses.each do |address|
-      data = data + padding(address)
+      data = data + padding(address.downcase)
     end
+    data = data + "00000000000000000000000000000000000000000000000000000000000000be"
     values.each do |value|
       data = data + padding(value.to_i.to_s(16))
     end
+    return data
+  end
 
-    puts data
+  def self.airdrop(private_key, airdrop_contract_address, token_contract_address, addresses, values, gas_limit, gas_price)
+    data = build_airdrop_data(token_contract_address, addresses, values)
+
+    rawtx = generate_raw_transaction(private_key, 0, data, gas_limit, gas_price, airdrop_contract_address)
+    
+    @@rpc.eth_send_raw_transaction(rawtx)
   end
 
   def self.transfer_token(private_key, token_contract_address, token_decimals, amount, gas_limit, gas_price, to, nonce=nil)
@@ -226,10 +243,6 @@ module EthTool
       str = str[2 .. str.length-1]
     end
     str.rjust(64, '0')
-  end
-
-  def self.wputs(file, text)
-    File.open(file, 'a') { |f| f.puts(text) }
   end
   
 end
